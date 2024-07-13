@@ -34,17 +34,16 @@ def evaluate_accuracy(dev_loader, model, device):
 
 
 def produce_evaluation_file(dataset, model, device, save_path):
-    data_loader = DataLoader(dataset, batch_size=128, shuffle=False, drop_last=False)
+    data_loader = DataLoader(dataset, batch_size=32, shuffle=False, drop_last=False, num_workers=8)
     model.eval()
     
     for batch_x,utt_id in data_loader:
         fname_list = []
-        score_list = []  
+        score_list = []
         batch_size = batch_x.size(0)
         batch_x = batch_x.to(device)
         batch_out = model(batch_x)
-        batch_score = (batch_out[:, 1]
-                       ).data.cpu().numpy().ravel()
+        batch_score = (batch_out[:, 1]).data.cpu().numpy().ravel()
         # add outputs
         fname_list.extend(utt_id)
         score_list.extend(batch_score.tolist())
@@ -52,7 +51,7 @@ def produce_evaluation_file(dataset, model, device, save_path):
         with open(save_path, 'a+') as fh:
             for f, cm in zip(fname_list,score_list):
                 fh.write('{} {}\n'.format(f, cm))
-        fh.close()   
+        fh.close()
     print('Scores saved to {}'.format(save_path))
 
 def train_epoch(train_loader, model, lr,optim, device):
@@ -145,12 +144,12 @@ if __name__ == '__main__':
     dir_yaml = os.path.splitext('model_config_RawNet')[0] + '.yaml'
 
     with open(dir_yaml, 'r') as f_yaml:
-            parser1 = yaml.load(f_yaml)
+        parser1 = yaml.safe_load(f_yaml)
 
     if not os.path.exists('models'):
         os.mkdir('models')
     args = parser.parse_args()
- 
+
     #make experiment reproducible
     set_random_seed(args.seed, args)
     
@@ -175,10 +174,10 @@ if __name__ == '__main__':
         os.mkdir(model_save_path)
     
     #GPU device
-    device = 'cuda' if torch.cuda.is_available() else 'cpu'                  
+    device = 'cuda' if torch.cuda.is_available() else 'cpu'
     print('Device: {}'.format(device))
     
-    #model 
+    #model
     model = RawNet(parser1['model'], device)
     nb_params = sum([param.view(-1).size()[0] for param in model.parameters()])
     model =(model).to(device)
@@ -189,12 +188,13 @@ if __name__ == '__main__':
     if args.model_path:
         model.load_state_dict(torch.load(args.model_path,map_location=device))
         print('Model loaded : {}'.format(args.model_path))
+        print(model)
 
-    #evaluation 
+    #evaluation
     if args.eval:
-        file_eval = genSpoof_list( dir_meta =  os.path.join(args.protocols_path+'{}_cm_protocols/{}.cm.eval.trl.txt'.format(prefix,prefix_2021)),is_train=False,is_eval=True)
+        file_eval = genSpoof_list(dir_meta=os.path.join(args.protocols_path+'{}_cm_protocols/{}.cm.eval.trl.txt'.format(prefix, prefix_2021)),is_train=False,is_eval=True)
         print('no. of eval trials',len(file_eval))
-        eval_set=Dataset_ASVspoof2021_eval(list_IDs = file_eval,base_dir = os.path.join(args.database_path+'ASVspoof2021_{}_eval/'.format(args.track)))
+        eval_set = Dataset_ASVspoof2021_eval(list_IDs = file_eval,base_dir = os.path.join(args.database_path+'/ASVspoof2021_{}_eval/'.format(args.track)))
         produce_evaluation_file(eval_set, model, device, args.eval_output)
         sys.exit(0)
 
@@ -231,8 +231,7 @@ if __name__ == '__main__':
         writer.add_scalar('train_accuracy', train_accuracy, epoch)
         writer.add_scalar('valid_accuracy', valid_accuracy, epoch)
         writer.add_scalar('loss', running_loss, epoch)
-        print('\n{} - {} - {:.2f} - {:.2f}'.format(epoch,
-                                                   running_loss, train_accuracy, valid_accuracy))
+        print('\n{} - {} - {:.2f} - {:.2f}'.format(epoch, running_loss, train_accuracy, valid_accuracy))
         
         if valid_accuracy > best_acc:
             print('best model find at epoch', epoch)

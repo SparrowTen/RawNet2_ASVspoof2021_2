@@ -252,6 +252,16 @@ if __name__ == "__main__":
                     args.database_path + "ASVspoof2019_{}_eval/".format(args.track)
                 ),
             )
+        elif args.year == 2021:
+            eval_set = Dataset_ASVspoof2021_eval(
+                list_IDs=file_eval,
+                base_dir=os.path.join(
+                    args.database_path + "ASVspoof2021_{}_eval/".format(args.track)
+                ),
+            )
+        else :
+            print("Invalid year/track combination")
+            sys.exit(1)
         produce_evaluation_file(eval_set, model, device, args.eval_output)
         sys.exit(0)
 

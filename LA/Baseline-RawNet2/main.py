@@ -7,7 +7,7 @@ from torch import nn
 from torch import Tensor
 from torch.utils.data import DataLoader
 import yaml
-from data_utils import genSpoof_list,Dataset_ASVspoof2019_train,Dataset_ASVspoof2021_eval
+from data_utils import genSpoof_list,Dataset_ASVspoof2019_train,Dataset_ASVspoof2021_eval, Dataset_ASVspoof2019_eval
 from model import RawNet
 from tensorboardX import SummaryWriter
 from core_scripts.startup_config import set_random_seed
@@ -124,6 +124,7 @@ if __name__ == '__main__':
     parser.add_argument('--comment', type=str, default=None,
                         help='Comment to describe the saved model')
     # Auxiliary arguments
+    parser.add_argument('--year', type=int, default=2021, choices=[2019, 2021],)
     parser.add_argument('--track', type=str, default='LA',choices=['LA', 'PA','DF'], help='LA/PA/DF')
     parser.add_argument('--eval_output', type=str, default=None,
                         help='Path to save the evaluation result')
@@ -191,10 +192,14 @@ if __name__ == '__main__':
         print(model)
 
     #evaluation
-    if args.eval:
-        file_eval = genSpoof_list(dir_meta=os.path.join(args.protocols_path+'{}_cm_protocols/{}.cm.eval.trl.txt'.format(prefix, prefix_2021)),is_train=False,is_eval=True)
+    if args.is_eval:
+        this_prefix = prefix_2019 if args.year == 2019 else prefix_2021
+        file_eval = genSpoof_list(dir_meta=os.path.join(args.protocols_path+'{}_cm_protocols/{}.cm.eval.trl.txt'.format(prefix, this_prefix)),is_train=False,is_eval=True)
         print('no. of eval trials',len(file_eval))
-        eval_set = Dataset_ASVspoof2021_eval(list_IDs = file_eval,base_dir = os.path.join(args.database_path+'/ASVspoof2021_{}_eval/'.format(args.track)))
+        eval_set = None
+        # eval_set = Dataset_ASVspoof2021_eval(list_IDs = file_eval,base_dir = os.path.join(args.database_path+'/ASVspoof2021_{}_eval/'.format(args.track)))
+        if args.year == 2019 and args.track == 'LA':
+            eval_set = Dataset_ASVspoof2019_eval(list_IDs = file_eval,labels = None,base_dir = os.path.join(args.database_path+'ASVspoof2019_{}_eval/'.format(args.track)))
         produce_evaluation_file(eval_set, model, device, args.eval_output)
         sys.exit(0)
 

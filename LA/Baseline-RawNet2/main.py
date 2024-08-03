@@ -247,7 +247,6 @@ if __name__ == "__main__":
         if args.year == 2019 and args.track == "LA":
             eval_set = Dataset_ASVspoof2019_eval(
                 list_IDs=file_eval,
-                labels=None,
                 base_dir=os.path.join(
                     args.database_path + "ASVspoof2019_{}_eval/".format(args.track)
                 ),
